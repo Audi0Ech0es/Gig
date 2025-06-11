@@ -14,9 +14,13 @@
     }
 
     .wrapper {
-  width: 100%;
-  max-width: none;
-}
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0 10px;
+      display: flex;
+      flex-direction: column;
+    }
 
     .controls {
       display: flex;
@@ -166,188 +170,188 @@
   </div>
 
   <script>
-const TSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFiiNQbh6Zl6XboxeYDkXlgY0lCVxbgKY13disqsct61g_WmLXSnTG3HUeuzihqZ-HR0N6TIhPWyXb/pub?output=tsv";
+    const TSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFiiNQbh6Zl6XboxeYDkXlgY0lCVxbgKY13disqsct61g_WmLXSnTG3HUeuzihqZ-HR0N6TIhPWyXb/pub?output=tsv";
 
-let events = [];
-let expandedHeader = null;
+    let events = [];
+    let expandedHeader = null;
 
-async function loadEvents() {
-  try {
-    const res = await fetch(TSV_URL);
-    const tsv = await res.text();
-    const lines = tsv.trim().split("\n");
-    const headers = lines.shift().split("\t").map(h => h.trim());
+    async function loadEvents() {
+      try {
+        const res = await fetch(TSV_URL);
+        const tsv = await res.text();
+        const lines = tsv.trim().split("\n");
+        const headers = lines.shift().split("\t").map(h => h.trim());
 
-    events = lines.map(line => {
-      const cols = line.split("\t").map(c => c.trim());
-      const row = Object.fromEntries(headers.map((h, i) => [h, cols[i] || ""]));
-      row.Year = new Date(row.Date).getFullYear();
-      row.City = normalizeText(row.City);
-      row.Country = normalizeText(row.Country);
-      row.Venue = normalizeText(row.Venue);
-      return row;
+        events = lines.map(line => {
+          const cols = line.split("\t").map(c => c.trim());
+          const row = Object.fromEntries(headers.map((h, i) => [h, cols[i] || ""]));
+          row.Year = new Date(row.Date).getFullYear();
+          row.City = normalizeText(row.City);
+          row.Country = normalizeText(row.Country);
+          row.Venue = normalizeText(row.Venue);
+          return row;
+        });
+
+        renderByYear();
+      } catch (err) {
+        document.getElementById("concertList").textContent = "Failed to load data.";
+        console.error(err);
+      }
+    }
+
+    function normalizeText(str) {
+      if (!str) return '';
+      return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\x20-\x7E]/g, '')
+        .trim()
+        .toLowerCase()
+        .replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    document.getElementById("searchInput").addEventListener("input", e => {
+      const query = e.target.value.toLowerCase();
+      const filtered = events.filter(ev =>
+        ev.City.toLowerCase().includes(query) ||
+        ev.Country.toLowerCase().includes(query) ||
+        ev.Venue.toLowerCase().includes(query) ||
+        ev.Date.toLowerCase().includes(query)
+      );
+      const currentView = document.querySelector('.view-toggle button.active').id;
+      const groupKey = currentView === 'viewYear' ? 'Year' : currentView === 'viewCountry' ? 'Country' : 'City';
+      renderGrouped(groupBy(filtered, groupKey));
     });
 
-    renderByYear();
-  } catch (err) {
-    document.getElementById("concertList").textContent = "Failed to load data.";
-    console.error(err);
-  }
-}
+    function renderGrouped(grouped) {
+      const wrapper = document.getElementById("concertList");
+      wrapper.innerHTML = "";
+      const frag = document.createDocumentFragment();
 
-function normalizeText(str) {
-  if (!str) return '';
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\x20-\x7E]/g, '')
-    .trim()
-    .toLowerCase()
-    .replace(/\b\w/g, l => l.toUpperCase());
-}
+      Object.keys(grouped)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+        .forEach(key => {
+          const header = document.createElement("div");
+          header.className = "year collapsed";
+          header.setAttribute("role", "button");
+          header.setAttribute("tabindex", "0");
+          header.setAttribute("aria-expanded", "false");
 
-document.getElementById("searchInput").addEventListener("input", e => {
-  const query = e.target.value.toLowerCase();
-  const filtered = events.filter(ev =>
-    ev.City.toLowerCase().includes(query) ||
-    ev.Country.toLowerCase().includes(query) ||
-    ev.Venue.toLowerCase().includes(query) ||
-    ev.Date.toLowerCase().includes(query)
-  );
-  const currentView = document.querySelector('.view-toggle button.active').id;
-  const groupKey = currentView === 'viewYear' ? 'Year' : currentView === 'viewCountry' ? 'Country' : 'City';
-  renderGrouped(groupBy(filtered, groupKey));
-});
+          const icon = document.createElement("span");
+          icon.className = "toggle-icon";
+          icon.textContent = "▶";
 
-function renderGrouped(grouped) {
-  const wrapper = document.getElementById("concertList");
-  wrapper.innerHTML = "";
-  const frag = document.createDocumentFragment();
+          const label = document.createElement("span");
+          label.textContent = key;
 
-  Object.keys(grouped)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .forEach(key => {
-      const header = document.createElement("div");
-      header.className = "year collapsed";
-      header.setAttribute("role", "button");
-      header.setAttribute("tabindex", "0");
-      header.setAttribute("aria-expanded", "false");
+          header.appendChild(icon);
+          header.appendChild(label);
 
-      const icon = document.createElement("span");
-      icon.className = "toggle-icon";
-      icon.textContent = "▶";
+          const group = document.createElement("div");
+          group.className = "year-group";
+          const groupId = `group-${key}`;
+          group.id = groupId;
+          header.setAttribute("aria-controls", groupId);
 
-      const label = document.createElement("span");
-      label.textContent = key;
+          grouped[key].forEach(event => {
+            const item = document.createElement("div");
+            item.className = "item";
 
-      header.appendChild(icon);
-      header.appendChild(label);
+            const iconSVG = document.createElement("span");
+            iconSVG.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="#000">
+                <path d="M480-301q99-80 149.5-154T680-594q0-90-56-148t-144-58q-88 0-144 58t-56 148q0 65 50.5 139T480-301Zm0 101Q339-304 269.5-402T200-594q0-125 78-205.5T480-880q124 0 202 80.5T760-594q0 94-69.5 192T480-200Zm0-320q33 0 56.5-23.5T560-600q0-33-23.5-56.5T480-680q-33 0-56.5 23.5T400-600q0 33 23.5 56.5T480-520ZM200-80v-80h560v80H200Zm280-520Z"/>
+              </svg>
+            `;
 
-      const group = document.createElement("div");
-      group.className = "year-group";
-      const groupId = `group-${key}`;
-      group.id = groupId;
-      header.setAttribute("aria-controls", groupId);
+            const content = document.createElement("div");
+            content.textContent = `${event.Date} - ${event.Venue}, ${event.City}, ${event.Country || 'Unknown'}`;
 
-      grouped[key].forEach(event => {
-        const item = document.createElement("div");
-        item.className = "item";
+            const yearLabel = document.createElement("span");
+            yearLabel.className = "year-label";
+            yearLabel.textContent = event.Year;
 
-        const iconSVG = document.createElement("span");
-        iconSVG.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="#000">
-            <path d="M480-301q99-80 149.5-154T680-594q0-90-56-148t-144-58q-88 0-144 58t-56 148q0 65 50.5 139T480-301Zm0 101Q339-304 269.5-402T200-594q0-125 78-205.5T480-880q124 0 202 80.5T760-594q0 94-69.5 192T480-200Zm0-320q33 0 56.5-23.5T560-600q0-33-23.5-56.5T480-680q-33 0-56.5 23.5T400-600q0 33 23.5 56.5T480-520ZM200-80v-80h560v80H200Zm280-520Z"/>
-          </svg>
-        `;
+            item.appendChild(iconSVG);
+            item.appendChild(content);
+            item.appendChild(yearLabel);
+            group.appendChild(item);
+          });
 
-        const content = document.createElement("div");
-        content.textContent = `${event.Date} - ${event.Venue}, ${event.City}, ${event.Country || 'Unknown'}`;
+          header.addEventListener("click", () => toggleSection(header, group));
+          header.addEventListener("keydown", e => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggleSection(header, group);
+            }
+          });
 
-        const yearLabel = document.createElement("span");
-        yearLabel.className = "year-label";
-        yearLabel.textContent = event.Year;
+          frag.appendChild(header);
+          frag.appendChild(group);
+        });
 
-        item.appendChild(iconSVG);
-        item.appendChild(content);
-        item.appendChild(yearLabel);
-        group.appendChild(item);
-      });
+      wrapper.appendChild(frag);
+    }
 
-      header.addEventListener("click", () => toggleSection(header, group));
-      header.addEventListener("keydown", e => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toggleSection(header, group);
-        }
-      });
+    function toggleSection(header, group) {
+      if (expandedHeader && expandedHeader !== header) {
+        expandedHeader.classList.add("collapsed");
+        expandedHeader.setAttribute("aria-expanded", "false");
+        expandedHeader.nextElementSibling.classList.remove("shown");
+      }
 
-      frag.appendChild(header);
-      frag.appendChild(group);
-    });
+      const isCollapsed = header.classList.toggle("collapsed");
+      header.setAttribute("aria-expanded", (!isCollapsed).toString());
 
-  wrapper.appendChild(frag);
-}
+      if (!isCollapsed) {
+        group.classList.add("shown");
+        expandedHeader = header;
+      } else {
+        group.classList.remove("shown");
+        expandedHeader = null;
+      }
+    }
 
-function toggleSection(header, group) {
-  if (expandedHeader && expandedHeader !== header) {
-    expandedHeader.classList.add("collapsed");
-    expandedHeader.setAttribute("aria-expanded", "false");
-    expandedHeader.nextElementSibling.classList.remove("shown");
-  }
+    function clearWrapper() {
+      document.getElementById("concertList").innerHTML = "";
+      expandedHeader = null;
+    }
 
-  const isCollapsed = header.classList.toggle("collapsed");
-  header.setAttribute("aria-expanded", (!isCollapsed).toString());
+    function renderByYear() {
+      clearWrapper();
+      setActiveButton("viewYear");
+      const grouped = groupBy(events, "Year");
+      renderGrouped(grouped);
+    }
+    function renderByCountry() {
+      clearWrapper();
+      setActiveButton("viewCountry");
+      const grouped = groupBy(events, "Country");
+      renderGrouped(grouped);
+    }
+    function renderByCity() {
+      clearWrapper();
+      setActiveButton("viewCity");
+      const grouped = groupBy(events, "City");
+      renderGrouped(grouped);
+    }
+    function groupBy(data, key) {
+      return data.reduce((acc, item) => {
+        const value = item[key] || "Unknown";
+        acc[value] = acc[value] || [];
+        acc[value].push(item);
+        return acc;
+      }, {});
+    }
+    function setActiveButton(activeId) {
+      document.querySelectorAll('.view-toggle button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(activeId).classList.add('active');
+    }
 
-  if (!isCollapsed) {
-    group.classList.add("shown");
-    expandedHeader = header;
-  } else {
-    group.classList.remove("shown");
-    expandedHeader = null;
-  }
-}
+    document.getElementById("viewYear").addEventListener("click", renderByYear);
+    document.getElementById("viewCountry").addEventListener("click", renderByCountry);
+    document.getElementById("viewCity").addEventListener("click", renderByCity);
 
-function clearWrapper() {
-  document.getElementById("concertList").innerHTML = "";
-  expandedHeader = null;
-}
-
-function renderByYear() {
-  clearWrapper();
-  setActiveButton("viewYear");
-  const grouped = groupBy(events, "Year");
-  renderGrouped(grouped);
-}
-function renderByCountry() {
-  clearWrapper();
-  setActiveButton("viewCountry");
-  const grouped = groupBy(events, "Country");
-  renderGrouped(grouped);
-}
-function renderByCity() {
-  clearWrapper();
-  setActiveButton("viewCity");
-  const grouped = groupBy(events, "City");
-  renderGrouped(grouped);
-}
-function groupBy(data, key) {
-  return data.reduce((acc, item) => {
-    const value = item[key] || "Unknown";
-    acc[value] = acc[value] || [];
-    acc[value].push(item);
-    return acc;
-  }, {});
-}
-function setActiveButton(activeId) {
-  document.querySelectorAll('.view-toggle button').forEach(btn => btn.classList.remove('active'));
-  document.getElementById(activeId).classList.add('active');
-}
-
-document.getElementById("viewYear").addEventListener("click", renderByYear);
-document.getElementById("viewCountry").addEventListener("click", renderByCountry);
-document.getElementById("viewCity").addEventListener("click", renderByCity);
-
-loadEvents();
+    loadEvents();
   </script>
 </body>
 </html>
