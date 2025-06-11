@@ -2,356 +2,283 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Events by Year</title>
-  <link href="https://fonts.googleapis.com/css2?family=Reenie+Beanie&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oasis Gigography</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=Reenie+Beanie&display=swap" rel="stylesheet">
   <style>
     body {
+      font-family: 'IBM Plex Mono', monospace;
+      margin: 1rem;
       background-color: transparent;
-      color: #000;
-      font-family: 'Reenie Beanie', sans-serif;
-      margin: 0;
+      color: black;
+      max-width: 100%;
+      overflow-x: hidden;
     }
-
-    .wrapper {
-      width: 100%;
-      max-width: none;
-      margin: 0;
-      padding: 0 10px;
-      display: flex;
-      flex-direction: column;
+    h1 {
+      font-family: 'Reenie Beanie', cursive;
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
     }
-
     .controls {
       display: flex;
       flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 20px;
-      align-items: stretch;
-    }
-
-    .view-toggle {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .view-toggle button {
-      background-color: transparent;
-      color: #000;
-      padding: 8px 16px;
-      border: 1px solid #000;
-      cursor: pointer;
-      font-family: 'Reenie Beanie', sans-serif;
-      font-size: 1.2rem;
-      height: 100%;
-    }
-
-    .view-toggle button.active {
-      background-color: transparent;
-      border: 2px solid #000;
-    }
-
-    #searchInput {
-      font-size: 1.2rem;
-      padding: 8px 16px;
-      border: 1px solid #000;
-      font-family: 'Reenie Beanie', sans-serif;
-      flex-grow: 1;
-      min-width: 150px;
-    }
-
-    .year {
-      font-size: 1.5rem;
-      font-weight: 600;
-      border-bottom: 2px solid #000;
-      cursor: pointer;
-      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      justify-content: center;
       align-items: center;
-      gap: 10px;
-      padding: 10px 0;
     }
-
-    .year:focus {
-      outline: 2px solid #000;
-    }
-
-    .year.collapsed + .year-group {
-      display: none;
-    }
-
-    .item {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 0;
-      font-size: 1.5rem;
-      flex-wrap: wrap;
-    }
-
-    .year-label {
-      color: #000;
-      font-size: 0.9rem;
-      margin-left: auto;
-    }
-
-    .year-group {
-      border-left: 2px dotted #000;
-      padding-left: 16px;
-      margin-bottom: 20px;
-      opacity: 0;
-      transform: scaleX(0);
-      transition: opacity 0.5s ease, transform 0.5s ease;
-    }
-
-    .year:not(.collapsed) + .year-group.shown {
-      opacity: 1;
-      transform: scaleX(1);
-    }
-
-    .toggle-icon {
+    .controls input {
+      font-family: 'IBM Plex Mono', monospace;
       font-size: 1rem;
-      display: inline-block;
-      transition: transform 0.3s ease;
+      padding: 0.4rem;
+      color: black;
+      border: 1px solid black;
+      background: transparent;
+      width: 100%;
+      max-width: 300px;
     }
-
-    .year.collapsed .toggle-icon {
-      transform: rotate(-90deg);
+    .tab-button {
+      background-color: black;
+      color: white;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1rem;
+      padding: 0.4rem 0.8rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      flex-shrink: 0;
     }
-
-    .year:not(.collapsed) .toggle-icon {
-      transform: rotate(0deg);
+    .tab-button.active {
+      background-color: white;
+      color: black;
+      border: 1px solid black;
     }
-
+    .tab-button:hover {
+      background-color: #333;
+      color: white;
+    }
+    details {
+      margin-bottom: 1rem;
+      background: transparent;
+      border: 1px solid black;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      padding: 0;
+      max-width: 100%;
+    }
+    details[open] {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: white;
+      z-index: 999;
+      padding: 4rem 1rem 2rem;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    summary {
+      font-weight: bold;
+      font-size: 1.2rem;
+      padding: 1rem;
+      background: transparent;
+      color: black;
+      cursor: pointer;
+      font-family: 'Reenie Beanie', cursive;
+    }
+    .gig-count {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1rem;
+      margin-left: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 0.5rem;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th {
+      background-color: transparent;
+    }
     @media (max-width: 600px) {
-      .wrapper {
-        padding: 0 10px;
-      }
-
       .controls {
         flex-direction: column;
         align-items: stretch;
       }
-
-      .item {
-        font-size: 1.2rem;
-        flex-direction: column;
-        align-items: flex-start;
+      h1 {
+        font-size: 2rem;
       }
-
-      .view-toggle button {
-        font-size: 1rem;
-        padding: 6px 12px;
-      }
-
-      .year {
-        font-size: 1.2rem;
-      }
-
-      .year-label {
-        font-size: 0.8rem;
-        margin-left: 0;
-        margin-top: 4px;
+      .tab-button {
+        width: 100%;
       }
     }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <div class="controls">
-      <div class="view-toggle">
-        <button id="viewYear" class="active">By Year</button>
-        <button id="viewCountry">By Country</button>
-        <button id="viewCity">By City</button>
-      </div>
-      <input id="searchInput" type="text" placeholder="Search events..." />
-    </div>
-    <div id="concertList"><p>Loading events...</p></div>
+  <div class="controls">
+    <h1 style="margin: 0; font-size: 2rem;">Oasis Gigography</h1>
+    <input type="text" id="search" placeholder="Search...">
+    <button class="tab-button active" data-tab="gig-accordions">By Year</button>
+    <button class="tab-button" data-tab="country-accordions">By Country</button>
+    <button class="tab-button" data-tab="city-accordions">By City</button>
   </div>
+  <div id="gig-accordions"></div>
+  <div id="country-accordions" style="display:none"></div>
+  <div id="city-accordions" style="display:none"></div>
 
   <script>
     const TSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFiiNQbh6Zl6XboxeYDkXlgY0lCVxbgKY13disqsct61g_WmLXSnTG3HUeuzihqZ-HR0N6TIhPWyXb/pub?output=tsv";
 
-    let events = [];
-    let expandedHeader = null;
+    let rawData = [];
+    let headers = [];
 
-    async function loadEvents() {
-      try {
-        const res = await fetch(TSV_URL);
-        const tsv = await res.text();
-        const lines = tsv.trim().split("\n");
-        const headers = lines.shift().split("\t").map(h => h.trim());
+    fetch(TSV_URL)
+      .then(res => res.text())
+      .then(text => {
+        const rows = text.trim().split('\n').map(r => r.split('\t'));
+        [headers, ...rawData] = rows;
+        render();
+        renderGroup('country', 'country-accordions');
+        renderGroup('city', 'city-accordions');
+      });
 
-        events = lines.map(line => {
-          const cols = line.split("\t").map(c => c.trim());
-          const row = Object.fromEntries(headers.map((h, i) => [h, cols[i] || ""]));
-          row.Year = new Date(row.Date).getFullYear();
-          row.City = normalizeText(row.City);
-          row.Country = normalizeText(row.Country);
-          row.Venue = normalizeText(row.Venue);
-          return row;
-        });
+    function closeOthers(opening) {
+      document.querySelectorAll('details').forEach(d => {
+        if (d !== opening) d.removeAttribute('open');
+      });
+    }
 
-        renderByYear();
-      } catch (err) {
-        document.getElementById("concertList").textContent = "Failed to load data.";
-        console.error(err);
+    function render() {
+      const searchVal = document.getElementById('search').value.toLowerCase();
+      const grouped = {};
+
+      rawData.forEach(row => {
+        const dateStr = row[0];
+        const year = new Date(dateStr).getFullYear();
+        if (!row.join('').toLowerCase().includes(searchVal)) return;
+        if (!grouped[year]) grouped[year] = [];
+        grouped[year].push(row);
+      });
+
+      const container = document.getElementById('gig-accordions');
+      container.innerHTML = '';
+      Object.keys(grouped).sort((a, b) => a - b).forEach(key => buildSection(container, key, grouped[key]));
+    }
+
+    function renderGroup(field, containerId) {
+      const fieldIdx = headers.findIndex(h => h.toLowerCase().includes(field.toLowerCase()));
+      if (fieldIdx === -1) return;
+      const grouped = {};
+      rawData.forEach(row => {
+        const key = row[fieldIdx] && row[fieldIdx].trim() ? row[fieldIdx] : 'Unknown';
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(row);
+      });
+
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      Object.keys(grouped).sort().forEach(key => buildSection(container, key, grouped[key]));
+    }
+
+    function buildSection(container, key, rows) {
+      const section = document.createElement('details');
+      const summary = document.createElement('summary');
+      summary.innerHTML = `${key} <span class="gig-count">(${rows.length})</span>`;
+
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '×';
+      closeBtn.style.position = 'fixed';
+      closeBtn.style.top = '0.5rem';
+      closeBtn.style.right = '1rem';
+      closeBtn.style.background = 'none';
+      closeBtn.style.border = 'none';
+      closeBtn.style.fontSize = '2rem';
+      closeBtn.style.cursor = 'pointer';
+      closeBtn.style.zIndex = '1000';
+      closeBtn.addEventListener('click', () => {
+        section.removeAttribute('open');
+      });
+
+      section.appendChild(closeBtn);
+      section.appendChild(summary);
+
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+
+      const tbody = document.createElement('tbody');
+      const rowsPerPage = 10;
+      let currentPage = 1;
+      const totalPages = Math.ceil(rows.length / rowsPerPage);
+
+      function renderPage(page) {
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const pageRows = rows.slice(start, end);
+        tbody.innerHTML = pageRows.map(row => '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>').join('');
       }
+
+      renderPage(currentPage);
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      section.appendChild(table);
+
+      if (totalPages > 1) {
+        const nav = document.createElement('div');
+        nav.style.marginTop = '0.5rem';
+        nav.style.display = 'flex';
+        nav.style.justifyContent = 'center';
+        nav.style.gap = '0.5rem';
+
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement('button');
+          btn.textContent = i;
+          btn.className = 'tab-button';
+          if (i === currentPage) btn.classList.add('active');
+          btn.addEventListener('click', () => {
+            currentPage = i;
+            renderPage(currentPage);
+            nav.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          });
+          nav.appendChild(btn);
+        }
+        section.appendChild(nav);
+      }
+
+      summary.addEventListener('click', () => closeOthers(section));
+      
+      container.appendChild(section);
     }
 
-    function normalizeText(str) {
-      if (!str) return '';
-      return str
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\x20-\x7E]/g, '')
-        .trim()
-        .toLowerCase()
-        .replace(/\b\w/g, l => l.toUpperCase());
-    }
-
-    document.getElementById("searchInput").addEventListener("input", e => {
-      const query = e.target.value.toLowerCase();
-      const filtered = events.filter(ev =>
-        ev.City.toLowerCase().includes(query) ||
-        ev.Country.toLowerCase().includes(query) ||
-        ev.Venue.toLowerCase().includes(query) ||
-        ev.Date.toLowerCase().includes(query)
-      );
-      const currentView = document.querySelector('.view-toggle button.active').id;
-      const groupKey = currentView === 'viewYear' ? 'Year' : currentView === 'viewCountry' ? 'Country' : 'City';
-      renderGrouped(groupBy(filtered, groupKey));
+    document.getElementById('search').addEventListener('input', () => {
+      document.querySelectorAll('details').forEach(d => d.removeAttribute('open'));
+      render();
+      renderGroup('country', 'country-accordions');
+      renderGroup('city', 'city-accordions');
     });
 
-    function renderGrouped(grouped) {
-      const wrapper = document.getElementById("concertList");
-      wrapper.innerHTML = "";
-      const frag = document.createDocumentFragment();
+    document.querySelectorAll('.tab-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-      Object.keys(grouped)
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-        .forEach(key => {
-          const header = document.createElement("div");
-          header.className = "year collapsed";
-          header.setAttribute("role", "button");
-          header.setAttribute("tabindex", "0");
-          header.setAttribute("aria-expanded", "false");
-
-          const icon = document.createElement("span");
-          icon.className = "toggle-icon";
-          icon.textContent = "▶";
-
-          const label = document.createElement("span");
-          label.textContent = key;
-
-          header.appendChild(icon);
-          header.appendChild(label);
-
-          const group = document.createElement("div");
-          group.className = "year-group";
-          const groupId = `group-${key}`;
-          group.id = groupId;
-          header.setAttribute("aria-controls", groupId);
-
-          grouped[key].forEach(event => {
-            const item = document.createElement("div");
-            item.className = "item";
-
-            const iconSVG = document.createElement("span");
-            iconSVG.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="#000">
-                <path d="M480-301q99-80 149.5-154T680-594q0-90-56-148t-144-58q-88 0-144 58t-56 148q0 65 50.5 139T480-301Zm0 101Q339-304 269.5-402T200-594q0-125 78-205.5T480-880q124 0 202 80.5T760-594q0 94-69.5 192T480-200Zm0-320q33 0 56.5-23.5T560-600q0-33-23.5-56.5T480-680q-33 0-56.5 23.5T400-600q0 33 23.5 56.5T480-520ZM200-80v-80h560v80H200Zm280-520Z"/>
-              </svg>
-            `;
-
-            const content = document.createElement("div");
-            content.textContent = `${event.Date} - ${event.Venue}, ${event.City}, ${event.Country || 'Unknown'}`;
-
-            const yearLabel = document.createElement("span");
-            yearLabel.className = "year-label";
-            yearLabel.textContent = event.Year;
-
-            item.appendChild(iconSVG);
-            item.appendChild(content);
-            item.appendChild(yearLabel);
-            group.appendChild(item);
-          });
-
-          header.addEventListener("click", () => toggleSection(header, group));
-          header.addEventListener("keydown", e => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              toggleSection(header, group);
-            }
-          });
-
-          frag.appendChild(header);
-          frag.appendChild(group);
+        ['gig-accordions', 'country-accordions', 'city-accordions'].forEach(id => {
+          document.getElementById(id).style.display = btn.dataset.tab === id ? 'block' : 'none';
         });
 
-      wrapper.appendChild(frag);
-    }
-
-    function toggleSection(header, group) {
-      if (expandedHeader && expandedHeader !== header) {
-        expandedHeader.classList.add("collapsed");
-        expandedHeader.setAttribute("aria-expanded", "false");
-        expandedHeader.nextElementSibling.classList.remove("shown");
-      }
-
-      const isCollapsed = header.classList.toggle("collapsed");
-      header.setAttribute("aria-expanded", (!isCollapsed).toString());
-
-      if (!isCollapsed) {
-        group.classList.add("shown");
-        expandedHeader = header;
-      } else {
-        group.classList.remove("shown");
-        expandedHeader = null;
-      }
-    }
-
-    function clearWrapper() {
-      document.getElementById("concertList").innerHTML = "";
-      expandedHeader = null;
-    }
-
-    function renderByYear() {
-      clearWrapper();
-      setActiveButton("viewYear");
-      const grouped = groupBy(events, "Year");
-      renderGrouped(grouped);
-    }
-    function renderByCountry() {
-      clearWrapper();
-      setActiveButton("viewCountry");
-      const grouped = groupBy(events, "Country");
-      renderGrouped(grouped);
-    }
-    function renderByCity() {
-      clearWrapper();
-      setActiveButton("viewCity");
-      const grouped = groupBy(events, "City");
-      renderGrouped(grouped);
-    }
-    function groupBy(data, key) {
-      return data.reduce((acc, item) => {
-        const value = item[key] || "Unknown";
-        acc[value] = acc[value] || [];
-        acc[value].push(item);
-        return acc;
-      }, {});
-    }
-    function setActiveButton(activeId) {
-      document.querySelectorAll('.view-toggle button').forEach(btn => btn.classList.remove('active'));
-      document.getElementById(activeId).classList.add('active');
-    }
-
-    document.getElementById("viewYear").addEventListener("click", renderByYear);
-    document.getElementById("viewCountry").addEventListener("click", renderByCountry);
-    document.getElementById("viewCity").addEventListener("click", renderByCity);
-
-    loadEvents();
+        document.querySelectorAll('details').forEach(d => {
+          d.removeAttribute('open');
+        });
+      });
+    });
   </script>
 </body>
 </html>
