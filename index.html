@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Oasis Gigography</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=Reenie+Beanie&display=swap" rel="stylesheet">
   <style>
@@ -14,12 +14,6 @@
       max-width: 100%;
       overflow-x: hidden;
     }
-    h1 {
-      font-family: 'Reenie Beanie', cursive;
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -28,252 +22,188 @@
       justify-content: center;
       align-items: center;
     }
-    .controls input {
+    .controls input, .controls select {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 1rem;
       padding: 0.4rem;
-      color: black;
       border: 1px solid black;
       background: transparent;
+      color: black;
+      max-width: 200px;
+    }
+    table {
       width: 100%;
-      max-width: 300px;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 0.5rem;
+      text-align: center;
+    }
+    th {
+      background-color: black;
+      color: white;
+      font-family: 'Reenie Beanie', cursive;
+      font-size: 1.4rem;
+    }
+    .pagination-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
     .tab-button {
       background-color: black;
       color: white;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 1rem;
+      font-family: 'Reenie Beanie', cursive;
+      font-size: 1.2rem;
       padding: 0.4rem 0.8rem;
       border: none;
       border-radius: 4px;
       cursor: pointer;
       transition: background-color 0.2s;
-      flex-shrink: 0;
-    }
-    .tab-button.active {
-      background-color: white;
-      color: black;
-      border: 1px solid black;
     }
     .tab-button:hover {
       background-color: #333;
-      color: white;
-    }
-    details {
-      
-      margin-bottom: 1rem;
-      background: transparent;
-      border: 1px solid black;
-      border-radius: 8px;
-      overflow: hidden;
-      position: relative;
-      padding: 0;
-      max-width: 100%;
-    
-      overflow-y: hidden;
-    }
-    details[open] {overflow-y: hidden;
-      box-sizing: border-box;
-    }
-    summary {
-      font-weight: bold;
-      font-size: 1.6rem;
-      padding: 1rem;
-      background: transparent;
-      color: black;
-      cursor: pointer;
-      font-family: 'Reenie Beanie', cursive;
-    }
-    .gig-count {
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 1rem;
-      margin-left: 1rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid black;
-      padding: 0.5rem;
-      text-align: left;
-      font-size: 0.9rem;
-    }
-    th {
-      background-color: transparent;
-    }
-    @media (max-width: 600px) {
-      .controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      h1 {
-        font-size: 2rem;
-      }
-      .tab-button {
-        width: 100%;
-      }
     }
   </style>
 </head>
 <body>
   <div class="controls">
-    <h1 style="margin: 0; font-size: 2rem;">Oasis Gigography</h1>
+    <select id="filter-year"><option value="">By Year</option></select>
+    <select id="filter-country"><option value="">By Country</option></select>
+    <select id="filter-city"><option value="">By City</option></select>
     <input type="text" id="search" placeholder="Search...">
-    <button class="tab-button active" data-tab="gig-accordions">By Year</button>
-    <button class="tab-button" data-tab="country-accordions">By Country</button>
-    <button class="tab-button" data-tab="city-accordions">By City</button>
   </div>
-  <div id="gig-accordions"></div>
-  <div id="country-accordions" style="display:none"></div>
-  <div id="city-accordions" style="display:none"></div>
+
+  <div id="table-container"></div>
+  <div id="pagination" class="pagination-container"></div>
 
   <script>
     const TSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFiiNQbh6Zl6XboxeYDkXlgY0lCVxbgKY13disqsct61g_WmLXSnTG3HUeuzihqZ-HR0N6TIhPWyXb/pub?output=tsv";
 
-    let rawData = [];
-    let headers = [];
+    let fullData = [], rawData = [], headers = [], currentPage = 1;
+    const rowsPerPage = 10;
 
     fetch(TSV_URL)
       .then(res => res.text())
       .then(text => {
         const rows = text.trim().split('\n').map(r => r.split('\t'));
-        [headers, ...rawData] = rows;
-        render();
-        renderGroup('country', 'country-accordions');
-        renderGroup('city', 'city-accordions');
+        [headers, ...fullData] = rows;
+        rawData = [...fullData];
+        populateFilters();
+        renderTable();
+        renderPagination();
       });
 
-    function closeOthers(opening) {
-      document.querySelectorAll('details').forEach(d => {
-        if (d !== opening) d.removeAttribute('open');
+    function populateFilters() {
+      const yearSet = new Set(), countrySet = new Set(), citySet = new Set();
+      const yearSelect = document.getElementById('filter-year');
+      const countrySelect = document.getElementById('filter-country');
+      const citySelect = document.getElementById('filter-city');
+
+      fullData.forEach(row => {
+        const year = new Date(row[0]).getFullYear();
+        const country = row[headers.findIndex(h => h.toLowerCase().includes('country'))] || '';
+        const city = row[headers.findIndex(h => h.toLowerCase().includes('city'))] || '';
+        yearSet.add(year);
+        countrySet.add(country);
+        citySet.add(city);
       });
+
+      [...yearSet].sort().forEach(v => yearSelect.innerHTML += `<option value="${v}">${v}</option>`);
+      [...countrySet].sort().forEach(v => countrySelect.innerHTML += `<option value="${v}">${v}</option>`);
+      [...citySet].sort().forEach(v => citySelect.innerHTML += `<option value="${v}">${v}</option>`);
     }
 
-    function render() {
-      const searchVal = document.getElementById('search').value.toLowerCase();
-      const grouped = {};
+    function filterData() {
+      const year = document.getElementById('filter-year').value;
+      const country = document.getElementById('filter-country').value;
+      const city = document.getElementById('filter-city').value;
+      const search = document.getElementById('search').value.toLowerCase();
 
-      rawData.forEach(row => {
-        const dateStr = row[0];
-        const year = new Date(dateStr).getFullYear();
-        if (!row.join('').toLowerCase().includes(searchVal)) return;
-        if (!grouped[year]) grouped[year] = [];
-        grouped[year].push(row);
+      rawData = fullData.filter(row => {
+        const rowYear = new Date(row[0]).getFullYear().toString();
+        const rowCountry = row[headers.findIndex(h => h.toLowerCase().includes('country'))] || '';
+        const rowCity = row[headers.findIndex(h => h.toLowerCase().includes('city'))] || '';
+        const matchesYear = !year || rowYear === year;
+        const matchesCountry = !country || rowCountry === country;
+        const matchesCity = !city || rowCity === city;
+        const matchesSearch = row.join('').toLowerCase().includes(search);
+        return matchesYear && matchesCountry && matchesCity && matchesSearch;
       });
 
-      const container = document.getElementById('gig-accordions');
+      currentPage = 1;
+      renderTable();
+      renderPagination();
+    }
+
+    function renderTable() {
+      const container = document.getElementById('table-container');
       container.innerHTML = '';
-      Object.keys(grouped).sort((a, b) => a - b).forEach(key => buildSection(container, key, grouped[key]));
-    }
-
-    function renderGroup(field, containerId) {
-      const fieldIdx = headers.findIndex(h => h.toLowerCase().includes(field.toLowerCase()));
-      if (fieldIdx === -1) return;
-      const grouped = {};
-      rawData.forEach(row => {
-        const key = row[fieldIdx] && row[fieldIdx].trim() ? row[fieldIdx] : 'Unknown';
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(row);
-      });
-
-      const container = document.getElementById(containerId);
-      container.innerHTML = '';
-      Object.keys(grouped).sort().forEach(key => buildSection(container, key, grouped[key]));
-    }
-
-    function buildSection(container, key, rows) {
-      const section = document.createElement('details');
-      const summary = document.createElement('summary');
-      summary.innerHTML = `${key} <span class="gig-count">(${rows.length})</span>`;
-
-      const closeBtn = document.createElement('button');
-      closeBtn.textContent = '×';
-      closeBtn.style.position = 'fixed';
-      closeBtn.style.top = '0.5rem';
-      closeBtn.style.right = '1rem';
-      closeBtn.style.background = 'none';
-      closeBtn.style.border = 'none';
-      closeBtn.style.fontSize = '2rem';
-      closeBtn.style.cursor = 'pointer';
-      closeBtn.style.zIndex = '1000';
-      closeBtn.addEventListener('click', () => {
-        section.removeAttribute('open');
-      });
-
-      section.appendChild(closeBtn);
-      section.appendChild(summary);
 
       const table = document.createElement('table');
       const thead = document.createElement('thead');
       thead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
       const tbody = document.createElement('tbody');
-      const rowsPerPage = 10;
-      let currentPage = 1;
-      const totalPages = Math.ceil(rows.length / rowsPerPage);
+      const start = (currentPage - 1) * rowsPerPage;
+      const end = start + rowsPerPage;
+      const pageRows = rawData.slice(start, end);
 
-      function renderPage(page) {
-        const start = (page - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-        const pageRows = rows.slice(start, end);
-        tbody.innerHTML = pageRows.map(row => '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>').join('');
-      }
+      pageRows.forEach(row => {
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+          const td = document.createElement('td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
 
-      renderPage(currentPage);
       table.appendChild(thead);
       table.appendChild(tbody);
-      section.appendChild(table);
-
-      if (totalPages > 1) {
-        const nav = document.createElement('div');
-        nav.style.marginTop = '0.5rem';
-        nav.style.display = 'flex';
-        nav.style.justifyContent = 'center';
-        nav.style.gap = '0.5rem';
-
-        for (let i = 1; i <= totalPages; i++) {
-          const btn = document.createElement('button');
-          btn.textContent = i;
-          btn.className = 'tab-button';
-          if (i === currentPage) btn.classList.add('active');
-          btn.addEventListener('click', () => {
-            currentPage = i;
-            renderPage(currentPage);
-            nav.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-          });
-          nav.appendChild(btn);
-        }
-        section.appendChild(nav);
-      }
-
-      summary.addEventListener('click', () => closeOthers(section));
-      
-      container.appendChild(section);
+      container.appendChild(table);
     }
 
-    document.getElementById('search').addEventListener('input', () => {
-      document.querySelectorAll('details').forEach(d => d.removeAttribute('open'));
-      render();
-      renderGroup('country', 'country-accordions');
-      renderGroup('city', 'city-accordions');
-    });
+    function renderPagination() {
+      const pagination = document.getElementById('pagination');
+      pagination.innerHTML = '';
+      const totalPages = Math.ceil(rawData.length / rowsPerPage);
 
-    document.querySelectorAll('.tab-button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+      const prevBtn = document.createElement('button');
+      prevBtn.textContent = 'Prev';
+      prevBtn.className = 'tab-button';
+      prevBtn.disabled = currentPage === 1;
+      prevBtn.onclick = () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderTable();
+          renderPagination();
+        }
+      };
+      pagination.appendChild(prevBtn);
 
-        ['gig-accordions', 'country-accordions', 'city-accordions'].forEach(id => {
-          document.getElementById(id).style.display = btn.dataset.tab === id ? 'block' : 'none';
-        });
+      const nextBtn = document.createElement('button');
+      nextBtn.textContent = 'Next';
+      nextBtn.className = 'tab-button';
+      nextBtn.disabled = currentPage === totalPages;
+      nextBtn.onclick = () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderTable();
+          renderPagination();
+        }
+      };
+      pagination.appendChild(nextBtn);
+    }
 
-        document.querySelectorAll('details').forEach(d => {
-          d.removeAttribute('open');
-        });
-      });
-    });
+    document.getElementById('search').addEventListener('input', filterData);
+    document.getElementById('filter-year').addEventListener('change', filterData);
+    document.getElementById('filter-country').addEventListener('change', filterData);
+    document.getElementById('filter-city').addEventListener('change', filterData);
   </script>
 </body>
 </html>
